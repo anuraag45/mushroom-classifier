@@ -18,7 +18,8 @@ from torchvision import transforms
 import cv2
 
 IMG_SIZE = 224
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Force CPU — no CUDA dependency (required for Streamlit Cloud deployment)
+DEVICE = torch.device("cpu")
 
 # Normalization used during inference
 EVAL_TRANSFORMS = transforms.Compose([

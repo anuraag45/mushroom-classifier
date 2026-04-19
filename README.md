@@ -2,9 +2,12 @@
 
 A production-grade computer vision system that classifies mushroom images into species and predicts whether they are **edible** or **poisonous**, complete with Grad-CAM visual explainability and a Streamlit web interface.
 
+**Model weights are hosted on [Hugging Face Hub](https://huggingface.co/Anuraaag17/mushroom-classifier-models)** — the app downloads them automatically on first run.
+
 ![Python](https://img.shields.io/badge/Python-3.9+-3776ab?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?logo=pytorch)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-ff4b4b?logo=streamlit)
+![Hugging Face](https://img.shields.io/badge/🤗_Model-Hugging_Face-yellow)
 
 ---
 
@@ -15,7 +18,8 @@ Misidentifying poisonous mushrooms kills hundreds of people worldwide every year
 1. **Classifies** mushroom images into species (multi-class classification)
 2. **Predicts** edibility (binary: EDIBLE vs POISONOUS)
 3. **Warns** users when prediction confidence is low
-4. **Explains** decisions visually using Grad-CAM heatmaps
+4. **Safety Override** — low-confidence EDIBLE predictions are automatically overridden to UNSAFE
+5. **Explains** decisions visually using Grad-CAM heatmaps
 
 > ⚠️ **Disclaimer**: This tool is for educational purposes only. Never consume wild mushrooms based solely on AI predictions.
 
@@ -25,14 +29,13 @@ Misidentifying poisonous mushrooms kills hundreds of people worldwide every year
 
 | Component        | Technology                                              |
 |------------------|---------------------------------------------------------|
-| ML Framework     | PyTorch / torchvision                                   |
+| ML Framework     | PyTorch / torchvision (CPU-only for deployment)         |
 | Models           | Custom CNN · MobileNetV2 · **EfficientNet-B2** (recommended) |
-| Training         | AMP (Mixed Precision) · AdamW · OneCycleLR · Label Smoothing |
-| Data Pipeline    | torchvision transforms + DataLoader                     |
+| Model Hosting    | [Hugging Face Hub](https://huggingface.co/Anuraaag17/mushroom-classifier-models) via `hf_hub_download` |
 | Explainability   | Grad-CAM (hook-based)                                   |
 | Web App          | Streamlit                                               |
-| Evaluation       | scikit-learn, Seaborn, Matplotlib                       |
-| Dataset Source   | Kaggle via `kagglehub`                                  |
+| Deployment       | Streamlit Community Cloud                               |
+| Training         | AMP (Mixed Precision) · AdamW · OneCycleLR · Label Smoothing |
 
 ---
 
@@ -42,22 +45,26 @@ Misidentifying poisonous mushrooms kills hundreds of people worldwide every year
 mushroom-classifier/
 ├── app/
 │   └── app.py                  # Streamlit web application
-├── data/                       # Dataset (auto-downloaded)
-├── models/                     # Saved trained models (.pth)
-├── notebooks/
-│   └── eda.py                  # Exploratory Data Analysis script
-├── outputs/                    # Plots, metrics, confusion matrices
 ├── src/
 │   ├── __init__.py
-│   ├── data_preprocessing.py   # Download, cleaning, splits, augmentation
 │   ├── model.py                # CNN, MobileNetV2, and EfficientNet-B2 architectures
-│   ├── train.py                # Training loop with AMP, OneCycleLR, label smoothing
-│   ├── evaluate.py             # Metrics, confusion matrix, comparison
-│   ├── predict.py              # Single & batch inference with risk warnings
-│   └── explainability.py       # Grad-CAM heatmap generation
-├── requirements.txt
+│   ├── predict.py              # Inference with safety layer
+│   ├── explainability.py       # Grad-CAM heatmap generation
+│   ├── train.py                # Training loop (dev only)
+│   ├── evaluate.py             # Metrics & comparison (dev only)
+│   ├── data_preprocessing.py   # Download, cleaning, splits (dev only)
+│   └── utils/
+│       ├── __init__.py
+│       └── model_loader.py     # HF Hub model download utility
+├── .streamlit/
+│   └── config.toml             # Streamlit theme configuration
+├── requirements.txt            # Deployment dependencies
+├── .gitignore
+├── LICENSE
 └── README.md
 ```
+
+> **Note:** `data/`, `models/`, `outputs/` directories are gitignored. Model weights live on Hugging Face.
 
 ---
 
@@ -66,52 +73,79 @@ mushroom-classifier/
 ### 1. Clone & Install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/anuraag45/mushroom-classifier.git
 cd mushroom-classifier
 pip install -r requirements.txt
 ```
 
-### 2. Run EDA (Optional)
-
-```bash
-python notebooks/eda.py
-```
-
-### 3. Train Models
-
-```bash
-# Train EfficientNet-B2 (RECOMMENDED — best accuracy)
-python -m src.train --model efficientnet --epochs 25 --fine_tune
-
-# Train MobileNetV2 with fine-tuning
-python -m src.train --model transfer --epochs 20 --fine_tune
-
-# Train custom CNN baseline
-python -m src.train --model cnn --epochs 30
-```
-
-### 4. Evaluate & Compare
-
-```bash
-# Evaluate a single model
-python -m src.evaluate --model_path models/efficientnet_b2_final.pth --model_type efficientnet
-
-# Compare all available models
-python -m src.evaluate --compare
-```
-
-### 5. Single / Batch Prediction
-
-```bash
-python -m src.predict --image path/to/mushroom.jpg
-python -m src.predict --batch_dir path/to/images/
-```
-
-### 6. Launch Web App
+### 2. Launch the App
 
 ```bash
 streamlit run app/app.py
 ```
+
+On first run, model weights (~35 MB) are **automatically downloaded** from Hugging Face Hub. Subsequent runs use the cached copy.
+
+---
+
+## 🤗 Hugging Face Model
+
+Model weights are hosted at: **[Anuraaag17/mushroom-classifier-models](https://huggingface.co/Anuraaag17/mushroom-classifier-models)**
+
+| File | Model | Accuracy |
+|------|-------|----------|
+| `efficientnet_b2_best.pth` | EfficientNet-B2 | **87.0%** |
+
+The `model_loader.py` utility handles downloads using `hf_hub_download`:
+
+```python
+from src.utils.model_loader import download_model_if_needed
+
+# Downloads from HF Hub if not cached, returns local path
+model_path = download_model_if_needed(
+    repo_id="Anuraaag17/mushroom-classifier-models",
+    filename="efficientnet_b2_best.pth",
+)
+```
+
+**No raw HTTP or urllib** — uses the official Hugging Face SDK with automatic caching, ETag validation, and resumable downloads.
+
+---
+
+## ☁️ Streamlit Cloud Deployment
+
+### Deploy in 3 Steps
+
+1. **Fork** this repository on GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io)
+3. Create new app:
+   - **Repository:** `your-username/mushroom-classifier`
+   - **Branch:** `main`
+   - **Main file path:** `app/app.py`
+4. Click **Deploy** 🚀
+
+### Why It Works
+
+- ✅ **No `.pth` files in repo** — model downloads from HF Hub at runtime
+- ✅ **CPU-only** — no CUDA/GPU dependency
+- ✅ **No hardcoded paths** — HF Hub manages caching
+- ✅ **No local file dependency** — embedded metadata as fallback
+- ✅ **`requirements.txt` complete** — all deps declared
+
+---
+
+## 🔒 Safety Layer
+
+The system implements a strict safety-first approach:
+
+| Scenario | Confidence | Model Says | App Shows |
+|----------|-----------|------------|-----------|
+| High confidence | ≥ 70% | EDIBLE | ✅ EDIBLE |
+| High confidence | ≥ 70% | POISONOUS | ☠️ POISONOUS |
+| Low confidence | < 70% | POISONOUS | ☠️ POISONOUS + ⚠️ warning |
+| Low confidence | < 70% | EDIBLE | **⚠️ UNCERTAIN → Treat as POISONOUS** |
+
+> **Critical Rule:** A low-confidence EDIBLE prediction is **never** shown as safe. It is automatically overridden to UNCERTAIN/POISONOUS with a warning.
 
 ---
 
@@ -137,20 +171,38 @@ AdaptiveAvgPool → Dense(256) → BN → ReLU → Dropout(0.5) → Linear(num_c
 - **Backbone**: EfficientNet-B2 pre-trained on ImageNet (compound scaling)
 - **Head**: Dropout(0.3) → Dense(512) → BN → ReLU → Dropout(0.2) → Linear
 - **Fine-tuning**: Last ~37% of backbone unfrozen with CosineAnnealingLR
-- **Why EfficientNet?** Compound scaling (depth + width + resolution) → significantly better features than MobileNetV2
+- **Why EfficientNet?** Compound scaling (depth + width + resolution) → significantly better features
 
 ---
 
-## ⚡ Training Optimizations
+## 🧪 Testing Instructions
 
-| Technique | Purpose |
-|-----------|---------|
-| AMP (Mixed Precision) | 2× faster training on CUDA with lower memory usage |
-| AdamW Optimizer | Better weight decay regularization than Adam |
-| OneCycleLR | Super-convergence — faster and higher accuracy |
-| CosineAnnealingLR | Smooth fine-tuning with gradual LR decay |
-| Label Smoothing (0.1) | Prevents overconfident predictions, improves generalization |
-| Gradient Clipping | Prevents exploding gradients during training |
+### Verify Auto-Download
+
+```bash
+# 1. Delete cached model (if any)
+rm -rf ~/.cache/huggingface/hub/models--Anuraaag17--mushroom-classifier-models
+
+# 2. Run the app
+streamlit run app/app.py
+
+# 3. Verify: "Downloading model..." spinner should appear
+# 4. Upload an image → prediction works
+# 5. Re-run: no download spinner (cached)
+```
+
+### Verify Safety Layer
+
+1. Upload a mushroom image
+2. Set confidence threshold to 0.95 (to trigger low-confidence for testing)
+3. Verify: if model predicts EDIBLE, it should be overridden to UNCERTAIN
+
+### Verify No Heavy Files
+
+```bash
+# Should return nothing
+git ls-files '*.pth' '*.pt' '*.h5' '*.ckpt'
+```
 
 ---
 
@@ -160,36 +212,26 @@ Grad-CAM produces visual explanations by computing gradients of the predicted cl
 
 ---
 
-## ⚠️ Risk-Based Output
+## 📈 Training (Development Only)
 
-```
-if confidence < 70%:
-    ⚠️ "Low confidence prediction. Do NOT rely on this result."
-```
+```bash
+# Install dev dependencies
+pip install pandas scikit-learn matplotlib seaborn kagglehub
 
-False negatives (EDIBLE when actually POISONOUS) can be fatal. The system defaults unknown species to POISONOUS and issues safety warnings when uncertain.
+# Train EfficientNet-B2 (RECOMMENDED)
+python -m src.train --model efficientnet --epochs 25 --fine_tune
+
+# Evaluate
+python -m src.evaluate --model_path models/efficientnet_b2_final.pth --model_type efficientnet
+```
 
 ---
 
-## 📈 Data Augmentation
+## 🔗 Links
 
-| Augmentation       | Purpose                              |
-|--------------------|--------------------------------------|
-| Random Flip        | Handle different camera orientations |
-| Random Rotation    | Account for rotated specimens        |
-| RandomResizedCrop  | Vary subject scale                   |
-| ColorJitter        | Simulate lighting variations         |
-| GaussianBlur       | Simulate slight camera defocus       |
-
----
-
-## 🔮 Future Improvements
-
-- [ ] Cloud deployment (Docker + AWS/GCP)
-- [ ] ONNX/TorchScript export for mobile
-- [ ] Expand to 50+ species
-- [ ] GPS-based species filtering
-- [ ] Monte Carlo Dropout for uncertainty quantification
+- 📦 [GitHub Repository](https://github.com/anuraag45/mushroom-classifier)
+- 🤗 [Model Weights (Hugging Face)](https://huggingface.co/Anuraaag17/mushroom-classifier-models)
+- 🚀 [Live Demo (Streamlit Cloud)](https://mushroom-classifier.streamlit.app) *(deploy to activate)*
 
 ---
 

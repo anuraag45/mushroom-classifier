@@ -27,7 +27,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 IMG_SIZE = 224
 CONFIDENCE_THRESHOLD = 0.70
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Force CPU — no CUDA dependency (required for Streamlit Cloud deployment)
+DEVICE = torch.device("cpu")
 
 # Standard ImageNet normalization
 EVAL_TRANSFORMS = transforms.Compose([
@@ -125,12 +126,26 @@ def predict_single(
 
     low_confidence = confidence < threshold
     warning_msg = None
+
+    # ── Safety Layer ──────────────────────────────────────────────────────
+    # CRITICAL: Prevent confident "EDIBLE" predictions at low confidence.
+    # Default unknown/uncertain cases to POISONOUS for safety.
     if low_confidence:
-        warning_msg = (
-            f"⚠️ Low confidence prediction ({confidence:.1%}). "
-            "Do NOT rely on this result for safety decisions. "
-            "Consult an expert mycologist before consuming any wild mushroom."
-        )
+        if toxicity == "EDIBLE":
+            # Override edible to poisonous when confidence is low
+            toxicity = "POISONOUS"
+            warning_msg = (
+                f"⚠️ Low confidence ({confidence:.1%}) — safety override applied. "
+                "Model predicted EDIBLE but is not confident enough. "
+                "Defaulting to POISONOUS. "
+                "Do NOT consume without expert verification."
+            )
+        else:
+            warning_msg = (
+                f"⚠️ Low confidence prediction ({confidence:.1%}). "
+                "Do NOT rely on this result for safety decisions. "
+                "Consult an expert mycologist before consuming any wild mushroom."
+            )
 
     all_probs = {idx_to_class[i]: float(p) for i, p in enumerate(probs)}
 

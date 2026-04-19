@@ -185,6 +185,7 @@ cython_debug/
 # Model weights
 *.pth
 *.pt
+models/
 
 # Training outputs
 outputs/
@@ -201,5 +202,5 @@ checkpoints/
 *.h5
 *.ckpt
 
-# Streamlit cache
-.streamlit/
+# Streamlit cache (but NOT .streamlit/config.toml — needed for Cloud theme)
+# .streamlit/
