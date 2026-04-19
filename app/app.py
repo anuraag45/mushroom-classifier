@@ -23,15 +23,27 @@ import json
 import streamlit as st
 import numpy as np
 import torch
-import urllib.request
+import requests
 from PIL import Image
 
 MODEL_PATH = "models/efficientnet_b2_best.pth"
+URL = "https://huggingface.co/Anuraag17/mushroom-classifier-models/resolve/main/efficientnet_b2_best.pth"
 
 if not os.path.exists(MODEL_PATH):
     os.makedirs("models", exist_ok=True)
-    url = "https://huggingface.co/Anuraag17/mushroom-classifier-models/resolve/main/efficientnet_b2_best.pth"
-    urllib.request.urlretrieve(url, MODEL_PATH)
+
+    print("Downloading model...")
+
+    response = requests.get(URL, stream=True)
+    
+    if response.status_code != 200:
+        raise Exception(f"Failed to download model: {response.status_code}")
+
+    with open(MODEL_PATH, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    print("Model downloaded successfully.")
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
