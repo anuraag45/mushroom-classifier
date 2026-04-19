@@ -179,3 +179,27 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# === ML / Deep Learning ===
+
+# Model weights
+*.pth
+*.pt
+
+# Training outputs
+outputs/
+runs/
+logs/
+
+# Dataset (never upload raw data)
+data/
+
+# Checkpoints
+checkpoints/
+
+# Large files
+*.h5
+*.ckpt
+
+# Streamlit cache
+.streamlit/
