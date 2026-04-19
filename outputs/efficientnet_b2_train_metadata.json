@@ -1,0 +1,15 @@
+{
+  "model_type": "efficientnet",
+  "model_name": "efficientnet_b2",
+  "num_classes": 9,
+  "epochs_trained": 40,
+  "final_train_acc": 0.9316875931049159,
+  "final_val_acc": 0.8440913604766633,
+  "final_train_loss": 0.8261029429576782,
+  "final_val_loss": 1.0061670346435274,
+  "best_val_acc": 0.8510427010923535,
+  "best_val_loss": 1.0079665704895746,
+  "model_path": "models\\efficientnet_b2_final.pth",
+  "device": "cuda",
+  "timestamp": "2026-04-19T15:32:32.151950"
+}

@@ -1,0 +1,54 @@
+{
+  "num_classes": 9,
+  "class_to_idx": {
+    "Agaricus": 0,
+    "Amanita": 1,
+    "Boletus": 2,
+    "Cortinarius": 3,
+    "Entoloma": 4,
+    "Hygrocybe": 5,
+    "Lactarius": 6,
+    "Russula": 7,
+    "Suillus": 8
+  },
+  "idx_to_class": {
+    "0": "Agaricus",
+    "1": "Amanita",
+    "2": "Boletus",
+    "3": "Cortinarius",
+    "4": "Entoloma",
+    "5": "Hygrocybe",
+    "6": "Lactarius",
+    "7": "Russula",
+    "8": "Suillus"
+  },
+  "idx_to_toxicity": {
+    "0": "EDIBLE",
+    "1": "POISONOUS",
+    "2": "EDIBLE",
+    "3": "POISONOUS",
+    "4": "POISONOUS",
+    "5": "EDIBLE",
+    "6": "EDIBLE",
+    "7": "EDIBLE",
+    "8": "EDIBLE"
+  },
+  "class_weights": {
+    "0": 2.1138101664417452,
+    "1": 0.9944973544973545,
+    "2": 0.69522118656606,
+    "3": 0.8924976258309592,
+    "4": 2.0555555555555554,
+    "5": 2.3518518518518516,
+    "6": 0.47724964452569574,
+    "7": 0.6493919292426755,
+    "8": 2.406041986687148
+  },
+  "split_sizes": {
+    "train": 4699,
+    "val": 1007,
+    "test": 1008
+  },
+  "removed_images": 0,
+  "image_root": "C:\\Users\\anura\\.cache\\kagglehub\\datasets\\maysee\\mushrooms-classification-common-genuss-images\\versions\\1\\Mushrooms"
+}

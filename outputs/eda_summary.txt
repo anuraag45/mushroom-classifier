@@ -1,0 +1,15 @@
+
+==================================================
+  IMBALANCE ANALYSIS
+==================================================
+  Total images:     6714
+  Number of classes: 9
+  Mean per class:    746
+  Max class:         Lactarius (1563)
+  Min class:         Suillus (311)
+  Imbalance ratio:   5.0x
+
+  Strategy: Using class weights (inversely proportional
+  to frequency) during training to penalize errors on
+  underrepresented classes more heavily.
+==================================================

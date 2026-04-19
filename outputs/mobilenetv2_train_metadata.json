@@ -1,0 +1,15 @@
+{
+  "model_type": "transfer",
+  "model_name": "mobilenetv2",
+  "num_classes": 9,
+  "epochs_trained": 35,
+  "final_train_acc": 0.9163651840817195,
+  "final_val_acc": 0.8510427010923535,
+  "final_train_loss": 0.8613657864339048,
+  "final_val_loss": 1.0097012877345914,
+  "best_val_acc": 0.8510427010923535,
+  "best_val_loss": 1.014398759147735,
+  "model_path": "models\\mobilenetv2_final.pth",
+  "device": "cuda",
+  "timestamp": "2026-04-19T16:16:30.574272"
+}

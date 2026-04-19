@@ -1,0 +1,15 @@
+{
+  "model_type": "cnn",
+  "model_name": "cnn",
+  "num_classes": 9,
+  "epochs_trained": 30,
+  "final_train_acc": 0.1945094701000213,
+  "final_val_acc": 0.2313803376365442,
+  "final_train_loss": 2.094957941667809,
+  "final_val_loss": 2.016073290143965,
+  "best_val_acc": 0.24925521350546176,
+  "best_val_loss": 2.0752708641987927,
+  "model_path": "models\\cnn_final.pth",
+  "device": "cuda",
+  "timestamp": "2026-04-19T17:00:19.125546"
+}
