@@ -23,7 +23,15 @@ import json
 import streamlit as st
 import numpy as np
 import torch
+import urllib.request
 from PIL import Image
+
+MODEL_PATH = "models/efficientnet_b2_best.pth"
+
+if not os.path.exists(MODEL_PATH):
+    os.makedirs("models", exist_ok=True)
+    url = "https://huggingface.co/Anuraag17/mushroom-classifier-models/resolve/main/efficientnet_b2_best.pth"
+    urllib.request.urlretrieve(url, MODEL_PATH)
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
