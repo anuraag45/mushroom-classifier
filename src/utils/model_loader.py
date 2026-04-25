@@ -23,11 +23,12 @@ logger = logging.getLogger(__name__)
 # ── Default Configuration ────────────────────────────────────────────────────
 DEFAULT_REPO_ID = "Anuraaag17/mushroom-classifier-models"
 DEFAULT_FILENAME = "efficientnet_b2_best.pth"
-
+SECONDARY_FILENAME= "mobilenetv2_best.pth"
 
 def download_model_if_needed(
     repo_id: str = DEFAULT_REPO_ID,
     filename: str = DEFAULT_FILENAME,
+    filename2: str = SECONDARY_FILENAME,
     cache_dir: str = None,
 ) -> str:
     """Download model weights from Hugging Face Hub if not already cached.
@@ -62,11 +63,13 @@ def download_model_if_needed(
         raise SystemExit(1)
 
     logger.info(f"Checking model: repo={repo_id}, file={filename}")
+    logger.info(f"Checking model: repo={repo_id}, file={filename2}")
 
     try:
         local_path = hf_hub_download(
             repo_id=repo_id,
             filename=filename,
+            filename2=filename2,
             repo_type="model",
             cache_dir=cache_dir,
         )
@@ -75,10 +78,11 @@ def download_model_if_needed(
 
     except Exception as e:
         _handle_download_error(e, repo_id, filename)
+        _handle_download_error(e, repo_id, filename2)
         raise SystemExit(1)
 
 
-def _handle_download_error(error: Exception, repo_id: str, filename: str):
+def _handle_download_error(error: Exception, repo_id: str, filename: str, filename2: str):
     """Log a user-friendly error message based on the exception type."""
     error_type = type(error).__name__
 
@@ -91,6 +95,11 @@ def _handle_download_error(error: Exception, repo_id: str, filename: str):
     elif "EntryNotFound" in error_type:
         logger.error(
             f"File not found: '{filename}' in repo '{repo_id}'. "
+            f"Check that the filename exactly matches the uploaded file on Hugging Face."
+        )
+    elif "EntryNotFound" in error_type:
+        logger.error(
+            f"File not found: '{filename2}' in repo '{repo_id}'. "
             f"Check that the filename exactly matches the uploaded file on Hugging Face."
         )
     elif "HfHubHTTPError" in error_type or "HTTPError" in error_type:
