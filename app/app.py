@@ -38,8 +38,31 @@ from PIL import Image
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from src.utils.model_loader import download_model_if_needed, get_hf_model_catalog
+from src.utils.model_loader import download_model_if_needed
+try:
+    from src.utils.model_loader import get_hf_model_catalog
+except ImportError:
+    def get_hf_model_catalog() -> dict:
+        return {
+            "efficientnet_b2": {
+                "label": "EfficientNet-B2 (Recommended)",
+                "type": "efficientnet",
+                "repo_id": "Anuraaag17/mushroom-classifier-models",
+                "filename": "efficientnet_b2_best.pth",
+            },
+            "mobilenetv2": {
+                "label": "MobileNetV2",
+                "type": "transfer",
+                "repo_id": "Anuraaag17/mushroom-classifier-models",
+                "filename": "mobilenetv2_best.pth",
+            },
+            "cnn": {
+                "label": "Custom CNN",
+                "type": "cnn",
+                "repo_id": "Anuraaag17/mushroom-classifier-models",
+                "filename": "cnn_best.pth",
+            },
+        }
 from src.predict import predict_single, CONFIDENCE_THRESHOLD
 from src.explainability import explain_prediction
 from src.model import build_cnn_model, build_transfer_model, build_efficientnet_model
