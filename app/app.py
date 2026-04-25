@@ -39,7 +39,7 @@ from PIL import Image
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.utils.model_loader import download_model_if_needed
+from src.utils.model_loader import download_model_if_needed, get_hf_model_catalog
 from src.predict import predict_single, CONFIDENCE_THRESHOLD
 from src.explainability import explain_prediction
 from src.model import build_cnn_model, build_transfer_model, build_efficientnet_model
@@ -50,9 +50,6 @@ logger = logging.getLogger(__name__)
 DEVICE = torch.device("cpu")
 
 # ── Hugging Face Model Config ────────────────────────────────────────────────
-HF_REPO_ID = "Anuraaag17/mushroom-classifier-models"
-HF_FILENAME = "efficientnet_b2_best.pth"
-
 # Embedded metadata so the app works without outputs/data_metadata.json
 EMBEDDED_METADATA = {
     "num_classes": 9,
@@ -212,24 +209,21 @@ st.markdown("""
 
 # ── Helper Functions ─────────────────────────────────────────────────────────
 
-def ensure_model_downloaded() -> str:
-    """Download model from HF Hub if not cached, with Streamlit spinner.
-
-    Returns the local path to the model file.
-    Shows user-friendly errors if download fails.
-    """
+def ensure_model_downloaded(repo_id: str, filename: str, label: str) -> str:
+    """Download a selected model from HF Hub if not cached."""
     try:
         with st.spinner("📥 Downloading model from Hugging Face Hub (first run only)..."):
             model_path = download_model_if_needed(
-                repo_id=HF_REPO_ID,
-                filename=HF_FILENAME,
+                repo_id=repo_id,
+                filename=filename,
             )
         return model_path
     except SystemExit:
         st.error(
             "❌ **Failed to download model weights.**\n\n"
-            f"- **Repository:** `{HF_REPO_ID}`\n"
-            f"- **Filename:** `{HF_FILENAME}`\n\n"
+            f"- **Model:** `{label}`\n"
+            f"- **Repository:** `{repo_id}`\n"
+            f"- **Filename:** `{filename}`\n\n"
             "Please check:\n"
             "1. Your internet connection\n"
             "2. The Hugging Face repo exists and is public\n"
@@ -275,8 +269,17 @@ def get_metadata():
 
 
 def find_available_models() -> dict:
-    """Build available model options. HF model is always primary."""
+    """Build available model options from Hugging Face and local files."""
     available = {}
+    for _, config in get_hf_model_catalog().items():
+        label = f"{config['label']} [HF]"
+        available[label] = {
+            "type": config["type"],
+            "source": "huggingface",
+            "repo_id": config["repo_id"],
+            "filename": config["filename"],
+            "label": config["label"],
+        }
 
     # Always offer the HF-hosted EfficientNet as the primary option
     available["🚀 EfficientNet-B2 (Recommended)"] = {
@@ -303,8 +306,18 @@ def find_available_models() -> dict:
                 label = f"📱 MobileNetV2 ({fname})"
                 mtype = "transfer"
 
-            available[label] = {"path": full_path, "type": mtype, "source": "local"}
+            available[label] = {
+                "path": full_path,
+                "type": mtype,
+                "source": "local",
+                "label": label,
+            }
 
+    available = {
+        name: config
+        for name, config in available.items()
+        if config["source"] != "huggingface" or "filename" in config
+    }
     return available
 
 
@@ -363,7 +376,11 @@ with st.sidebar:
 
     # Resolve model path based on source
     if selected["source"] == "huggingface":
-        model_path = ensure_model_downloaded()
+        model_path = ensure_model_downloaded(
+            repo_id=selected.get("repo_id", "Anuraaag17/mushroom-classifier-models"),
+            filename=selected.get("filename", "efficientnet_b2_best.pth"),
+            label=selected.get("label", model_choice),
+        )
     else:
         model_path = selected["path"]
         if not os.path.exists(model_path):

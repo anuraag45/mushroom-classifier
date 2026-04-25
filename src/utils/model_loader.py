@@ -3,105 +3,144 @@ model_loader.py
 ===============
 Utility module for downloading model weights from Hugging Face Hub.
 
-- Downloads multiple model files safely
-- Uses caching (no re-download if already present)
-- Handles errors cleanly
+Uses `hf_hub_download` for reliable, cached model retrieval.
+Designed for Streamlit Cloud deployment where model files
+are NOT stored in the Git repository.
+
+Testing Instructions (as comments):
+    1. Delete local HF cache: rm -rf ~/.cache/huggingface/hub/models--Anuraaag17--mushroom-classifier-models
+    2. Run: streamlit run app/app.py
+    3. Verify: spinner appears → model downloads → prediction works
+    4. Re-run: no spinner → model loads from cache instantly
 """
 
 import logging
+from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
+
 # ── Default Configuration ────────────────────────────────────────────────────
 DEFAULT_REPO_ID = "Anuraaag17/mushroom-classifier-models"
-PRIMARY_FILENAME = "efficientnet_b2_best.pth"
-SECONDARY_FILENAME = "mobilenetv2_best.pth"
+DEFAULT_FILENAME = "efficientnet_b2_best.pth"
+
+MODEL_REGISTRY = {
+    "efficientnet_b2": {
+        "label": "🚀 EfficientNet-B2 (Recommended)",
+        "type": "efficientnet",
+        "repo_id": DEFAULT_REPO_ID,
+        "filename": "efficientnet_b2_best.pth",
+    },
+    "mobilenetv2": {
+        "label": "📱 MobileNetV2",
+        "type": "transfer",
+        "repo_id": DEFAULT_REPO_ID,
+        "filename": "mobilenetv2_best.pth",
+    },
+    "cnn": {
+        "label": "🧱 Custom CNN",
+        "type": "cnn",
+        "repo_id": DEFAULT_REPO_ID,
+        "filename": "cnn_best.pth",
+    },
+}
 
 
-def download_models(
+def get_hf_model_catalog() -> dict:
+    """Return a copy of the Hugging Face model catalog."""
+    return deepcopy(MODEL_REGISTRY)
+
+
+def get_hf_model_config(model_key: str) -> dict:
+    """Return the config for a named Hugging Face-hosted model."""
+    try:
+        return deepcopy(MODEL_REGISTRY[model_key])
+    except KeyError as exc:
+        available = ", ".join(sorted(MODEL_REGISTRY))
+        raise ValueError(
+            f"Unknown model key '{model_key}'. Available models: {available}"
+        ) from exc
+
+
+def download_model_if_needed(
     repo_id: str = DEFAULT_REPO_ID,
-    primary_filename: str = PRIMARY_FILENAME,
-    secondary_filename: str = SECONDARY_FILENAME,
+    filename: str = DEFAULT_FILENAME,
     cache_dir: str = None,
-):
-    """
-    Download both primary and secondary models from Hugging Face Hub.
+) -> str:
+    """Download model weights from Hugging Face Hub if not already cached.
+
+    Uses `huggingface_hub.hf_hub_download` which handles:
+        - Automatic caching (won't re-download if cached)
+        - ETag-based cache validation
+        - Resumable downloads
+        - Proper error types for different failure modes
+
+    Args:
+        repo_id:   Hugging Face repository ID (e.g. "username/repo-name").
+                   Must exactly match the repo on huggingface.co.
+        filename:  Name of the model file in the repository.
+                   Must exactly match the uploaded filename.
+        cache_dir: Optional override for the HF cache directory.
+                   If None, uses the default HF cache (~/.cache/huggingface).
 
     Returns:
-        tuple: (primary_model_path, secondary_model_path)
-    """
+        str: Absolute local path to the downloaded (or cached) model file.
 
+    Raises:
+        SystemExit: If the download fails irrecoverably (logged before exit).
+    """
     try:
         from huggingface_hub import hf_hub_download
     except ImportError:
         logger.error(
-            "huggingface_hub is not installed. Run: pip install huggingface_hub"
+            "huggingface_hub is not installed. "
+            "Run: pip install huggingface_hub"
         )
         raise SystemExit(1)
+
+    logger.info(f"Checking model: repo={repo_id}, file={filename}")
 
     try:
-        logger.info(f"Downloading primary model: {primary_filename}")
-        primary_path = hf_hub_download(
+        local_path = hf_hub_download(
             repo_id=repo_id,
-            filename=primary_filename,
+            filename=filename,
             repo_type="model",
             cache_dir=cache_dir,
         )
-
-        logger.info(f"Downloading secondary model: {secondary_filename}")
-        secondary_path = hf_hub_download(
-            repo_id=repo_id,
-            filename=secondary_filename,
-            repo_type="model",
-            cache_dir=cache_dir,
-        )
-
-        logger.info(f"Primary model ready at: {primary_path}")
-        logger.info(f"Secondary model ready at: {secondary_path}")
-
-        return primary_path, secondary_path
+        logger.info(f"Model ready at: {local_path}")
+        return local_path
 
     except Exception as e:
-        _handle_download_error(e, repo_id, primary_filename, secondary_filename)
+        _handle_download_error(e, repo_id, filename)
         raise SystemExit(1)
 
 
-def _handle_download_error(
-    error: Exception,
-    repo_id: str,
-    primary_filename: str,
-    secondary_filename: str,
-):
-    """Log a clean, useful error message."""
-
+def _handle_download_error(error: Exception, repo_id: str, filename: str):
+    """Log a user-friendly error message based on the exception type."""
     error_type = type(error).__name__
 
     if "RepositoryNotFound" in error_type:
         logger.error(
             f"Repository not found: '{repo_id}'. "
-            f"Check repo name (format: username/repo-name)."
+            f"Check that the repo_id exactly matches your Hugging Face repository. "
+            f"Expected format: 'username/repo-name'."
         )
-
     elif "EntryNotFound" in error_type:
         logger.error(
-            f"File not found in repo '{repo_id}'. "
-            f"Check filenames:\n"
-            f"- {primary_filename}\n"
-            f"- {secondary_filename}"
+            f"File not found: '{filename}' in repo '{repo_id}'. "
+            f"Check that the filename exactly matches the uploaded file on Hugging Face."
         )
-
     elif "HfHubHTTPError" in error_type or "HTTPError" in error_type:
         logger.error(
-            f"HTTP error while downloading: {error}. "
-            f"Check internet or Hugging Face status."
+            f"HTTP error downloading model from Hugging Face: {error}. "
+            f"Check your internet connection and try again."
         )
-
     elif "ConnectionError" in error_type or "Timeout" in error_type:
         logger.error(
-            "Network error: Unable to reach Hugging Face Hub."
+            f"Network error: Could not reach Hugging Face Hub. "
+            f"Check your internet connection."
         )
-
     else:
         logger.error(
-            f"Unexpected error: {error_type}: {error}"
+            f"Unexpected error downloading model: {error_type}: {error}"
         )
